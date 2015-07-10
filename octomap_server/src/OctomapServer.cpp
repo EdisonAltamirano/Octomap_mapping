@@ -557,10 +557,9 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
     point3d point(pointx_ned, pointy_ned, it->z);
     ROS_WARN("Maxrange = %f",m_maxRange);
-    ROS_WARN("Minrange = %f",m_minRange);
     ROS_WARN("point = %f",point);
     ROS_WARN("sensororigin= %f",sensorOrigin);
-    //ROS_WARN("norm = %f",(point-sensorOrigin).norm());
+    ROS_WARN("norm = %f",(point-sensorOrigin).norm());
     if ((m_minRange > 0) && (point - sensorOrigin).norm() < m_minRange) continue;
 
     // maxrange check

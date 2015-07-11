@@ -84,7 +84,7 @@
 #include <utility> // std::pair
 //#define COLOR_OCTOMAP_SERVER // switch color here - easier maintenance, only maintain OctomapServer. Two targets are defined in the cmake, octomap_server_color and octomap_server. One has this defined, and the other doesn't
 
-#define COLOR_OCTOMAP_SERVER // TODO: make extra header
+//#define COLOR_OCTOMAP_SERVER // turned off here, turned on identical ColorOctomapServer.h - easier maintenance, only maintain OctomapServer and then copy and paste to ColorOctomapServer and change define. There are prettier ways to do this, but this works for now
 
 #ifdef COLOR_OCTOMAP_SERVER
 #include <octomap/ColorOcTree.h>

@@ -70,7 +70,8 @@
 #include <octomap_ros/conversions.h>
 #include <octomap/octomap.h>
 #include <octomap/OcTreeKey.h>
-
+#include "ros/ros.h"
+#include "std_msgs/String.h"
 //#define COLOR_OCTOMAP_SERVER // switch color here - easier maintenance, only maintain OctomapServer. Two targets are defined in the cmake, octomap_server_color and octomap_server. One has this defined, and the other doesn't
 
 #ifdef COLOR_OCTOMAP_SERVER
@@ -102,6 +103,8 @@ public:
 
   virtual void insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud);
   virtual bool openFile(const std::string& filename);
+  //Callback pcl
+  void enablepclCallback(const std_msgs::String::ConstPtr& msg);
 
 protected:
   inline static void updateMinKey(const octomap::OcTreeKey& in, octomap::OcTreeKey& min) {
@@ -213,12 +216,12 @@ protected:
   tf::TransformListener m_tfListener;
   boost::recursive_mutex m_config_mutex;
   dynamic_reconfigure::Server<OctomapServerConfig> m_reconfigureServer;
-
+  ros::Subscriber m_enablepcl;
   OcTreeT* m_octree;
   octomap::KeyRay m_keyRay;  // temp storage for ray casting
   octomap::OcTreeKey m_updateBBXMin;
   octomap::OcTreeKey m_updateBBXMax;
-
+  std::string v_enablepcl; 
   double m_minRange;
   double m_maxRange;
   std::string m_worldFrameId; // the map frame

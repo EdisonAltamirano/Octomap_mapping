@@ -186,6 +186,10 @@ OctomapServer::OctomapServer(const ros::NodeHandle private_nh_, const ros::NodeH
   dynamic_reconfigure::Server<OctomapServerConfig>::CallbackType f;
   f = boost::bind(&OctomapServer::reconfigureCallback, this, _1, _2);
   m_reconfigureServer.setCallback(f);
+
+  //Sub to enable pcl
+  m_enablepcl = m_nh.subscribe("enablepcl", 1,
+                                      &OctomapServer::enablepclCallback, this);
 }
 
 OctomapServer::~OctomapServer(){
@@ -205,6 +209,9 @@ OctomapServer::~OctomapServer(){
     m_octree = NULL;
   }
 
+}
+void OctomapServer::enablepclCallback(const std_msgs::String::ConstPtr& msg){
+  v_enablepcl = msg->data;
 }
 
 bool OctomapServer::openFile(const std::string& filename){
@@ -498,7 +505,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
   ros::WallTime startTime = ros::WallTime::now();
   size_t octomapSize = m_octree->size();
   // TODO: estimate num occ. voxels for size of arrays (reserve)
-  if (octomapSize <= 1){
+  if (octomapSize <= 1 && (v_enablepcl=="" ||v_enablepcl=="Deactivate" )){
     ROS_WARN("Nothing to publish, octree is empty");
     return;
   }
@@ -690,7 +697,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
 
     m_fmarkerPub.publish(freeNodesVis);
   }
-
+ 
 
   // finish pointcloud:
   if (publishPointCloud){

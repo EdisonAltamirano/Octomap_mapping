@@ -58,7 +58,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-
+#include <geometry_msgs/Vector3.h>
 #include <tf/transform_listener.h>
 #include <tf/message_filter.h>
 #include <message_filters/subscriber.h>
@@ -72,6 +72,9 @@
 #include <octomap/OcTreeKey.h>
 #include "ros/ros.h"
 #include "std_msgs/String.h"
+#include <octomap_server/points_list.h>
+#include <octomap_server/point_detected_list.h>
+#include <octomap_server/point_detected.h>
 //#define COLOR_OCTOMAP_SERVER // switch color here - easier maintenance, only maintain OctomapServer. Two targets are defined in the cmake, octomap_server_color and octomap_server. One has this defined, and the other doesn't
 
 #ifdef COLOR_OCTOMAP_SERVER
@@ -105,7 +108,8 @@ public:
   virtual bool openFile(const std::string& filename);
   //Callback pcl
   void enablepclCallback(const std_msgs::String::ConstPtr& msg);
-
+  //Callback PointList
+  void pointListCallback(const octomap_server::point_detected_list::ConstPtr& msg);
 protected:
   inline static void updateMinKey(const octomap::OcTreeKey& in, octomap::OcTreeKey& min) {
     for (unsigned i = 0; i < 3; ++i)
@@ -209,7 +213,7 @@ protected:
   static std_msgs::ColorRGBA heightMapColor(double h);
   ros::NodeHandle m_nh;
   ros::NodeHandle m_nh_private;
-  ros::Publisher  m_markerPub, m_binaryMapPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub;
+  ros::Publisher  m_markerPub, m_binaryMapPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, m_pointlistPub;
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService;
@@ -217,11 +221,14 @@ protected:
   boost::recursive_mutex m_config_mutex;
   dynamic_reconfigure::Server<OctomapServerConfig> m_reconfigureServer;
   ros::Subscriber m_enablepcl;
+  ros::Subscriber m_pointlistsub;
   OcTreeT* m_octree;
   octomap::KeyRay m_keyRay;  // temp storage for ray casting
   octomap::OcTreeKey m_updateBBXMin;
   octomap::OcTreeKey m_updateBBXMax;
-  std::string v_enablepcl; 
+  std::string v_enablepcl;
+  octomap_server::point_detected list_vectorpoint; 
+  octomap_server::points_list v_pointList;
   double m_minRange;
   double m_maxRange;
   std::string m_worldFrameId; // the map frame

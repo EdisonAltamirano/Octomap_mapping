@@ -190,6 +190,9 @@ OctomapServer::OctomapServer(const ros::NodeHandle private_nh_, const ros::NodeH
   //Sub to enable pcl
   m_enablepcl = m_nh.subscribe("enablepcl", 1,
                                       &OctomapServer::enablepclCallback, this);
+  //Sub to take actual list and update it
+  m_pointlistsub = m_nh.subscribe("/octomap/point_list", 1, &OctomapServer::pointListCallback, this);
+
 }
 
 OctomapServer::~OctomapServer(){
@@ -212,6 +215,19 @@ OctomapServer::~OctomapServer(){
 }
 void OctomapServer::enablepclCallback(const std_msgs::String::ConstPtr& msg){
   v_enablepcl = msg->data;
+}
+void OctomapServer::pointListCallback(const octomap_server::point_detected_list::ConstPtr& msg){
+
+
+  ROS_WARN("Pointlist debug");
+
+  for (int i = 0; i < msg->len; i++)
+  {
+  ROS_WARN("%f",msg->objects[i].x);    
+  }
+  ROS_WARN("Pointlist debug2");
+  ROS_WARN("%f",v_pointList.points[0].x);
+  
 }
 
 bool OctomapServer::openFile(const std::string& filename){
@@ -352,13 +368,14 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
     pc_nonground.header = pc.header;
   }
 
-
+ if(v_enablepcl != "" && v_enablepcl != "Deactivate" ){
   insertScan(sensorToWorldTf.getOrigin(), pc_ground, pc_nonground);
 
   double total_elapsed = (ros::WallTime::now() - startTime).toSec();
   ROS_DEBUG("Pointcloud insertion in OctomapServer done (%zu+%zu pts (ground/nonground), %f sec)", pc_ground.size(), pc_nonground.size(), total_elapsed);
 
   publishAll(cloud->header.stamp);
+  }
 }
 
 void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCloud& ground, const PCLPointCloud& nonground){
@@ -505,11 +522,12 @@ void OctomapServer::publishAll(const ros::Time& rostime){
   ros::WallTime startTime = ros::WallTime::now();
   size_t octomapSize = m_octree->size();
   // TODO: estimate num occ. voxels for size of arrays (reserve)
-  if (octomapSize <= 1 && (v_enablepcl=="" ||v_enablepcl=="Deactivate" )){
+  if (octomapSize <= 1){
     ROS_WARN("Nothing to publish, octree is empty");
     return;
   }
-
+ 
+  ROS_WARN("There is info");
   bool publishFreeMarkerArray = m_publishFreeSpace && (m_latchedTopics || m_fmarkerPub.getNumSubscribers() > 0);
   bool publishMarkerArray = (m_latchedTopics || m_markerPub.getNumSubscribers() > 0);
   bool publishPointCloud = (m_latchedTopics || m_pointCloudPub.getNumSubscribers() > 0);
@@ -717,6 +735,7 @@ void OctomapServer::publishAll(const ros::Time& rostime){
 
   double total_elapsed = (ros::WallTime::now() - startTime).toSec();
   ROS_DEBUG("Map publishing in OctomapServer took %f sec", total_elapsed);
+ 
 }
 
 bool OctomapServer::octomapBinarySrv(OctomapSrv::Request  &req,

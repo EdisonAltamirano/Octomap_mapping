@@ -66,15 +66,22 @@
 #include <octomap_msgs/GetOctomap.h>
 #include <octomap_msgs/BoundingBoxQuery.h>
 #include <octomap_msgs/conversions.h>
-
 #include <octomap_ros/conversions.h>
 #include <octomap/octomap.h>
 #include <octomap/OcTreeKey.h>
 #include "ros/ros.h"
 #include "std_msgs/String.h"
+#include "geometry_msgs/Pose.h"
 #include <octomap_server/points_list.h>
 #include <octomap_server/point_detected_list.h>
 #include <octomap_server/point_detected.h>
+#include <eigen3/Eigen/Dense>
+#include <iostream>
+#include <cmath>
+#include <fstream>
+#include <vector>
+#include <cstdlib>
+#include <utility> // std::pair
 //#define COLOR_OCTOMAP_SERVER // switch color here - easier maintenance, only maintain OctomapServer. Two targets are defined in the cmake, octomap_server_color and octomap_server. One has this defined, and the other doesn't
 
 #ifdef COLOR_OCTOMAP_SERVER
@@ -109,7 +116,10 @@ public:
   //Callback pcl
   void enablepclCallback(const std_msgs::String::ConstPtr& msg);
   //Callback PointList
-  void pointListCallback(const octomap_server::point_detected_list::ConstPtr& msg);
+  //void pointListCallback(const octomap_server::point_detected_list::ConstPtr& msg);
+  //Callback pose
+  void ins_pose_callback(const geometry_msgs::Pose::ConstPtr& msg);
+  void keep_position_callback(const std_msgs::String::ConstPtr& msg);
 protected:
   inline static void updateMinKey(const octomap::OcTreeKey& in, octomap::OcTreeKey& min) {
     for (unsigned i = 0; i < 3; ++i)
@@ -214,6 +224,7 @@ protected:
   ros::NodeHandle m_nh;
   ros::NodeHandle m_nh_private;
   ros::Publisher  m_markerPub, m_binaryMapPub, m_fullMapPub, m_pointCloudPub, m_collisionObjectPub, m_mapPub, m_cmapPub, m_fmapPub, m_fmarkerPub, m_pointlistPub;
+  ros::Publisher pointlist_pub;
   message_filters::Subscriber<sensor_msgs::PointCloud2>* m_pointCloudSub;
   tf::MessageFilter<sensor_msgs::PointCloud2>* m_tfPointCloudSub;
   ros::ServiceServer m_octomapBinaryService, m_octomapFullService, m_clearBBXService, m_resetService;
@@ -221,15 +232,31 @@ protected:
   boost::recursive_mutex m_config_mutex;
   dynamic_reconfigure::Server<OctomapServerConfig> m_reconfigureServer;
   ros::Subscriber m_enablepcl;
+  ros::Subscriber m_odometry;
+  ros::Subscriber m_updateposition;
   ros::Subscriber m_pointlistsub;
   OcTreeT* m_octree;
   octomap::KeyRay m_keyRay;  // temp storage for ray casting
   octomap::OcTreeKey m_updateBBXMin;
+  geometry_msgs::Vector3 obs;
   octomap::OcTreeKey m_updateBBXMax;
-  std::string v_enablepcl;
+  std::string v_enablepcl="";
+  std::string main_positiony="";
+  bool update_position=false;
+  float ned_x=0.0;
+  float ned_y=0.0;
+  float new_ned_y=0.0;
+  float ned_z=0.0;
+  float yaw=0.0;
+  float gate_angle_body=0.0;
+  float gate_angle=0.0;
   octomap_server::point_detected list_vectorpoint; 
   octomap_server::points_list v_pointList;
   double m_minRange;
+  int writepcl=0;
+  std::vector<double> vecx;
+  std::vector<double> vecy;
+  std::vector<double> vecz;
   double m_maxRange;
   std::string m_worldFrameId; // the map frame
   std::string m_baseFrameId; // base of the robot for ground plane filtering

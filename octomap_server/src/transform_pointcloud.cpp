@@ -12,29 +12,26 @@
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/common/transforms.h>
 #include <pcl_ros/transforms.h>
-
-
+#include <pcl_conversions/pcl_conversions.h>
+#include "tf2_ros/message_filter.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+tf::TransformListener *tf_listener;
+//std::string target_frame_("world_ned");
+//std::string camera_frame_("frontrs200_camera");
 ros::Publisher pub;
-tf::StampedTransform transform;
-
-void cloud_callback (const sensor_msgs::PointCloud2ConstPtr& input)
+void cloud_callback (const sensor_msgs::PointCloud2ConstPtr& input_)
 {
-    // Create a container for the data.
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    
+    sensor_msgs::PointCloud2 input = *input_;
+    input.header.frame_id = "frontrs200_camera";
+    //input.header.stamp = ros::Time::now();
+    sensor_msgs::PointCloud2 output;
+    tf_listener->waitForTransform("world_ned", "frontrs200_camera", ros::Time(0), ros::Duration(5.0));
+    pcl_ros::transformPointCloud("world_ned", input, output, *tf_listener);
 
-    pcl::PCLPointCloud2 pcl_pc2;
-    pcl_conversions::toPCL(*input, pcl_pc2);
-    pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
-
-    pcl_ros::transformPointCloud(*temp_cloud, *cloud_transformed, transform);
-
-    sensor_msgs::PointCloud2 cloud_publish;
-    pcl::toROSMsg(*cloud_transformed,cloud_publish);
-    cloud_publish.header = input->header;
-
-    pub.publish(cloud_publish);
+    pub.publish(output);
 }
 
 int main (int argc, char** argv){
@@ -44,27 +41,13 @@ int main (int argc, char** argv){
 
     ros::init (argc, argv, "point_cloud_transform");
     ros::NodeHandle nh;
-
-    // Create a ROS subscriber for the input point cloud
-    ros::Subscriber sub = nh.subscribe ("/frontr200/camera/depth_registered/points", 1, cloud_callback);
+    tf_listener = new tf::TransformListener();
 
     // Create a ROS publisher for the output point cloud
     pub = nh.advertise<sensor_msgs::PointCloud2> ("/point_cloud/cloud_transformed", 1);
 
-    tf::TransformListener listener;
-    ros::Rate rate(30.0);
-    while (nh.ok()){
-
-        try{
-            listener.lookupTransform("world_ned", "frontrs200_camera", ros::Time(), transform);
-        }
-        catch (tf::TransformException ex){
-            ROS_ERROR("%s",ex.what());
-        }
-
-        ros::spinOnce();
-        rate.sleep();
-    }
+    // Create a ROS subscriber for the input point cloud
+    ros::Subscriber sub = nh.subscribe ("/frontr200/camera/depth_registered/points", 1, cloud_callback);
 
     ros::spin();
     return 0;

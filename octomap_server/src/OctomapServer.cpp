@@ -510,7 +510,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
         // float pointy_ned= rot.coeff(1.0) + it->y;
         
 
-    //Body to ned
+    // Body to ned
     Eigen::Vector2d u;
       //  float distance = pow(pow(it->x,2),pow(it->y,2),0.5);
         u << it->x,

@@ -19,19 +19,24 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 tf::TransformListener *tf_listener;
 //std::string target_frame_("world_ned");
-//std::string camera_frame_("frontrs200_camera");
+//std::string camera_frame_("frontcolor");
 ros::Publisher pub;
 void cloud_callback (const sensor_msgs::PointCloud2ConstPtr& input_)
 {
-    
+    static int count = 1;
+    if (count != 5) {
+        count++;
+        return;
+    }
     sensor_msgs::PointCloud2 input = *input_;
-    input.header.frame_id = "frontrs200_camera";
+    input.header.frame_id = "frontcolor";
     //input.header.stamp = ros::Time::now();
     sensor_msgs::PointCloud2 output;
-    tf_listener->waitForTransform("world_ned", "frontrs200_camera", ros::Time(0), ros::Duration(5.0));
+    tf_listener->waitForTransform("world_ned", "frontcolor", ros::Time::now(), ros::Duration(10.0));
     pcl_ros::transformPointCloud("world_ned", input, output, *tf_listener);
 
     pub.publish(output);
+    count = 1;
 }
 
 int main (int argc, char** argv){

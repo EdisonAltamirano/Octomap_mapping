@@ -231,6 +231,7 @@ OctomapServer::OctomapServer(const ros::NodeHandle private_nh_, const ros::NodeH
   //m_pointlistsub = m_nh.subscribe("/octomap/point_list", 1, &OctomapServer::pointListCallback, this);
   //Pub to pass vector info of located obstacles
   pointlist_pub = m_nh.advertise<octomap_server::points_list>("/octomap/point_list", 1);
+  readyforcluster_pub = m_nh.advertise<std_msgs::String>("/readyforcluster", 1);
   //Subscriber odometry
   m_odometry = m_nh.subscribe("/uuv_simulation/dynamic_model/pose", 1,
                                       &OctomapServer::ins_pose_callback, this);
@@ -495,6 +496,10 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
   v_pointList.points.clear();
   int index=0;
+  int count=0;
+  std_msgs::String msg;
+  msg.data="Deactivate";
+  readyforcluster_pub.publish(msg);
   for (PCLPointCloud::const_iterator it = nonground.begin(); it != nonground.end(); ++it,index++){
     //Convert pointcloud to ned (Simulation gazebo)
     //float pointcloud_angle_body = atan2(it->y, it->x);
@@ -510,7 +515,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
         // float pointy_ned= rot.coeff(1.0) + it->y;
         
 
-    //Body to ned
+    // Body to ned
     Eigen::Vector2d u;
       //  float distance = pow(pow(it->x,2),pow(it->y,2),0.5);
         u << it->x,
@@ -520,7 +525,7 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
           sin(1.30318*yaw),cos(1.30318*yaw);
         Eigen::MatrixXd rot = J * u;
         pointx_ned= rot.coeff(0.0) ;
-        pointy_ned= rot.coeff(1.0) + ned_y*2-new_ned_y;
+        pointy_ned= -1* (rot.coeff(1.0) + ned_y*2-new_ned_y);
     // distance = pow(pow(it->x,2)+pow(it->y,2),0.5);
     angle=yaw;
     // cuadrante=0.0;
@@ -554,12 +559,12 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
     
   
     //ROS_WARN("We have data x=%f y y=%f  por %f en %f ",pointx_ned,pointy_ned,angle*180/M_PI,cuadrante);
-
+    if(count >1000){
+      count=0;
     point3d point(pointx_ned, pointy_ned, it->z);
-    ROS_WARN("Maxrange = %f",m_maxRange);
-    ROS_WARN("Minrange = %f",m_minRange);
-    ROS_WARN("point = %f",point);
-    ROS_WARN("sensororigin= %f",sensorOrigin);
+    //ROS_WARN("Maxrange = %f",m_maxRange);
+    //ROS_WARN("point = %f",point);
+    //ROS_WARN("sensororigin= %f",sensorOrigin);
     //ROS_WARN("norm = %f",(point-sensorOrigin).norm());
     if ((m_minRange > 0) && (point - sensorOrigin).norm() < m_minRange) continue;
 
@@ -578,19 +583,19 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
         obs.x =pointx_ned;
         obs.y = pointy_ned;
         obs.z = it->z;
-        ROS_WARN("We have dataocto x = %f y y= %f, con %f",it->x,it->y,angle*180/M_PI);
-        ROS_WARN("We have newdata x = %f y y= %f, con %f , ojo con ned=%f y newned=%f y por si %f",pointx_ned,pointy_ned,angle*180/M_PI,ned_y*2,new_ned_y,rot.coeff(1.0));
+        //ROS_WARN("We have dataocto x = %f y y= %f, con %f",it->x,it->y,angle*180/M_PI);
+        //ROS_WARN("We have newdata x = %f y y= %f, con %f , ojo con ned=%f y newned=%f y por si %f",pointx_ned,pointy_ned,angle*180/M_PI,ned_y*2,new_ned_y,rot.coeff(1.0));
         //ROS_WARN("%f",obs.z);
         v_pointList.points.push_back(obs);
         v_pointList.lenpoints=index;
-        vecx.push_back((double)pointx_ned);
-        vecy.push_back((double)pointy_ned);
-        vecz.push_back((double)obs.z);
+        // vecx.push_back((double)pointx_ned);
+        // vecy.push_back((double)pointy_ned);
+        // vecz.push_back((double)obs.z);
         updateMinKey(key, m_updateBBXMin);
         updateMaxKey(key, m_updateBBXMax);
 
 #ifdef COLOR_OCTOMAP_SERVER // NB: Only read and interpret color if it's an occupied node
-        m_octree->averageNodeColor(pointx_ned, pointy_ned, it->z, /*r=*/it->r, /*g=*/it->g, /*b=*/it->b);
+        // m_octree->averageNodeColor(pointx_ned, pointy_ned, it->z, /r=/it->r, /g=/it->g, /b=/it->b);
 #endif
       }
     } else {// ray longer than maxrange:;
@@ -610,6 +615,10 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
 
       }
     } 
+    
+    }else{
+      count++;
+    }
   }
   //ROS_WARN("%d",writepcl);
   /*if(writepcl){
@@ -621,8 +630,10 @@ void OctomapServer::insertScan(const tf::Point& sensorOriginTf, const PCLPointCl
       writepcl=0;
 
   }*/
-  
+ 
   pointlist_pub.publish(v_pointList);
+  msg.data="Activate";
+  readyforcluster_pub.publish(msg);
 
     
 
@@ -1473,6 +1484,3 @@ std_msgs::ColorRGBA OctomapServer::heightMapColor(double h) {
   return color;
 }
 }
-
-
-

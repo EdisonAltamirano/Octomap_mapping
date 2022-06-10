@@ -20,7 +20,7 @@
 </launch>
 ?>
 <launch>
-    <rosparam command="load" file="$(find ur_with_cam_gazebo)/config/common/camera2.yaml" />
+    <rosparam command="load" file="$(find octomap_server)/cfg/common/camera2.yaml" />
     <!--<param name="octomap_frame" type="string" value="map" />-->
 	<param name="octomap_frame" type="string" value="world_ned" />
     <param name="octomap_resolution" type="double" value="0.05" />
